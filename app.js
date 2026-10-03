@@ -163,4 +163,21 @@ async function deleteProduct(id) {
     if (res.ok) loadProducts();
 }
 
-init();
+async function init() {
+    try {
+        const resAdmin = await fetch(`${API_BASE}/api/check-admin/${user.id}`);
+        const adminData = await resAdmin.json();
+        
+        // Отладка: покажет ваш ID и статус
+        tg.showAlert(`Ваш ID: ${5498528671} | Админ: ${adminData.isAdmin}`);
+
+        isAdmin = adminData.isAdmin;
+        if (isAdmin) {
+            document.getElementById('adminBtn').classList.remove('hidden');
+        }
+    } catch (e) {
+        alert("Ошибка сети при проверке админа: " + e.message);
+    }
+    loadProducts();
+}
+
