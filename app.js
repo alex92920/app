@@ -1,24 +1,28 @@
 const tg = window.Telegram?.WebApp;
 if (tg) tg.expand();
 
+// Извлекаем ID из Telegram или берем дефолтный
 const user = tg?.initDataUnsafe?.user || { id: 5498528671, first_name: "Тест" };
-const API_BASE = '';
+const API_BASE = ''; // Если сервер и фронтенд на разных хостах, укажите тут URL сервера
 
 let allProducts = [];
 let cart = [];
 let isAdmin = false;
 
 async function init() {
-    try {
-        const resAdmin = await fetch(`${API_BASE}/api/check-admin/${user.id}`);
-        const adminData = await resAdmin.json();
-        isAdmin = adminData.isAdmin;
+    // 1. Показываем всплывающее окно с полученным ID
+    const currentId = user.id;
+    if (tg?.showAlert) {
+        tg.showAlert(`Ваш ID в Telegram: ${currentId}`);
+    } else {
+        alert(`Ваш ID: ${currentId}`);
+    }
 
-        if (isAdmin) {
-            document.getElementById('adminBtn').classList.remove('hidden');
-        }
-    } catch (e) {
-        console.error("Ошибка проверки прав админа:", e);
+    // 2. Принудительно показываем кнопку админки, если ID совпадает с 5498528671
+    if (Number(currentId) === 5498528671) {
+        isAdmin = true;
+        const adminBtn = document.getElementById('adminBtn');
+        if (adminBtn) adminBtn.classList.remove('hidden');
     }
 
     loadProducts();
@@ -36,6 +40,7 @@ async function loadProducts() {
 
 function renderProducts(products) {
     const catalog = document.getElementById('catalog');
+    if (!catalog) return;
     catalog.innerHTML = '';
 
     if (products.length === 0) {
@@ -84,6 +89,8 @@ function addToCart(productId) {
 
 function updateCartUI() {
     const cartModal = document.getElementById('cartModal');
+    if (!cartModal) return;
+
     if (cart.length > 0) {
         cartModal.classList.remove('hidden');
         document.getElementById('cartCount').innerText = cart.length;
@@ -125,10 +132,10 @@ async function checkout() {
 
 function toggleAdminPanel() {
     const panel = document.getElementById('adminSection');
-    panel.classList.toggle('hidden');
+    if (panel) panel.classList.toggle('hidden');
 }
 
-document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+document.getElementById('addProductForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const productData = {
         title: document.getElementById('pTitle').value,
@@ -138,46 +145,39 @@ document.getElementById('addProductForm').addEventListener('submit', async (e) =
         imageUrl: document.getElementById('pImageUrl').value
     };
 
-    const res = await fetch(`${API_BASE}/api/admin/products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, product: productData })
-    });
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/products`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, product: productData })
+        });
 
-    if (res.ok) {
-        alert('Товар успешно добавлен!');
-        e.target.reset();
-        loadProducts();
+        if (res.ok) {
+            alert('Товар успешно добавлен!');
+            e.target.reset();
+            loadProducts();
+        } else {
+            alert('Ошибка сервера при добавлении товара!');
+        }
+    } catch (err) {
+        alert('Ошибка отправки: ' + err.message);
     }
 });
 
 async function deleteProduct(id) {
     if (!confirm('Удалить товар?')) return;
 
-    const res = await fetch(`${API_BASE}/api/admin/products/${id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-    });
-
-    if (res.ok) loadProducts();
-}
-
-async function init() {
     try {
-        const resAdmin = await fetch(`${API_BASE}/api/check-admin/${user.id}`);
-        const adminData = await resAdmin.json();
-        
-        // Отладка: покажет ваш ID и статус
-        tg.showAlert(`Ваш ID: ${5498528671} | Админ: ${adminData.isAdmin}`);
+        const res = await fetch(`${API_BASE}/api/admin/products/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id })
+        });
 
-        isAdmin = adminData.isAdmin;
-        if (isAdmin) {
-            document.getElementById('adminBtn').classList.remove('hidden');
-        }
-    } catch (e) {
-        alert("Ошибка сети при проверке админа: " + e.message);
+        if (res.ok) loadProducts();
+    } catch (err) {
+        alert('Ошибка удаления: ' + err.message);
     }
-    loadProducts();
 }
 
+init();
