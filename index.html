@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Одежда Store</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Шапка -->
+        <header>
+            <h1>👕 Магазин одежды</h1>
+            <button id="adminBtn" class="hidden" onclick="toggleAdminPanel()">⚙️ Админка</button>
+        </header>
+
+        <!-- Админ-панель -->
+        <section id="adminSection" class="hidden">
+            <h2>Добавить товар</h2>
+            <form id="addProductForm">
+                <input type="text" id="pTitle" placeholder="Название товара" required>
+                <input type="text" id="pCategory" placeholder="Категория (Худи, Футболки)" required>
+                <input type="number" id="pPrice" placeholder="Цена (₽)" required>
+                <input type="text" id="pSizes" placeholder="Размеры через запятую (S, M, L, XL)" required>
+                <input type="url" id="pImageUrl" placeholder="Ссылка на фото" required>
+                <button type="submit" class="btn-success">Добавить в каталог</button>
+            </form>
+        </section>
+
+        <!-- Фильтры -->
+        <nav class="categories">
+            <button onclick="filterCategory('all')">Все</button>
+            <button onclick="filterCategory('Худи')">Худи</button>
+            <button onclick="filterCategory('Футболки')">Футболки</button>
+            <button onclick="filterCategory('Штаны')">Штаны</button>
+        </nav>
+
+        <!-- Витрина товаров -->
+        <main id="catalog" class="grid"></main>
+
+        <!-- Корзина -->
+        <div id="cartModal" class="cart-bar hidden">
+            <span>Корзина: <b id="cartCount">0</b> шт. (<b id="cartTotal">0</b> ₽)</span>
+            <button onclick="checkout()" class="btn-primary">Оформить</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

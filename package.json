@@ -1,0 +1,15 @@
+{
+  "name": "telegram-store",
+  "version": "1.0.0",
+  "description": "Telegram Mini App Store with Admin Panel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "telegraf": "^4.16.3"
+  }
+}
