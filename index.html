@@ -5,26 +5,121 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Одежда Store</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--tg-theme-bg-color, #f4f4f5);
+            color: var(--tg-theme-text-color, #000);
+            margin: 0;
+            padding: 15px;
+            padding-bottom: 80px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        header h1 { font-size: 20px; margin: 0; }
+        
+        /* Кнопка админки изначально видима для гарантированного теста */
+        #adminBtn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .hidden { display: none !important; }
+
+        #adminSection {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            border: 2px solid #2563eb;
+        }
+        #adminSection input {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #d4d4d8;
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
+        .categories {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+        .categories button {
+            padding: 8px 14px;
+            border-radius: 16px;
+            border: none;
+            background: #e4e4e7;
+            white-space: nowrap;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .card img { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; }
+        .card h3 { font-size: 14px; margin: 8px 0 2px; }
+        .card .price { font-weight: bold; font-size: 16px; color: #10b981; margin: 4px 0; }
+
+        .btn-primary { background: #2563eb; color: #fff; border: none; padding: 8px; border-radius: 8px; width: 100%; font-weight: 600; }
+        .btn-danger { background: #ef4444; color: #fff; border: none; padding: 6px; border-radius: 8px; margin-top: 5px; width: 100%; }
+        .btn-success { background: #10b981; color: #fff; border: none; padding: 10px; border-radius: 8px; width: 100%; font-weight: 600; }
+
+        .cart-bar {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            right: 15px;
+            background: #18181b;
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
-        <!-- Шапка -->
         <header>
             <h1>👕 Магазин одежды</h1>
-            <button id="adminBtn" class="hidden" onclick="toggleAdminPanel()">⚙️ Админка</button>
+            <button id="adminBtn" onclick="toggleAdminPanel()">⚙️ Админка</button>
         </header>
 
         <!-- Админ-панель -->
         <section id="adminSection" class="hidden">
-            <h2>Добавить товар</h2>
+            <h2>⚙️ Панель Администратора</h2>
             <form id="addProductForm">
                 <input type="text" id="pTitle" placeholder="Название товара" required>
                 <input type="text" id="pCategory" placeholder="Категория (Худи, Футболки)" required>
                 <input type="number" id="pPrice" placeholder="Цена (₽)" required>
-                <input type="text" id="pSizes" placeholder="Размеры через запятую (S, M, L, XL)" required>
+                <input type="text" id="pSizes" placeholder="Размеры через запятую (S, M, L)" required>
                 <input type="url" id="pImageUrl" placeholder="Ссылка на фото" required>
-                <button type="submit" class="btn-success">Добавить в каталог</button>
+                <button type="submit" class="btn-success">Добавить товар</button>
             </form>
         </section>
 
@@ -33,19 +128,130 @@
             <button onclick="filterCategory('all')">Все</button>
             <button onclick="filterCategory('Худи')">Худи</button>
             <button onclick="filterCategory('Футболки')">Футболки</button>
-            <button onclick="filterCategory('Штаны')">Штаны</button>
         </nav>
 
-        <!-- Витрина товаров -->
+        <!-- Витрина -->
         <main id="catalog" class="grid"></main>
 
         <!-- Корзина -->
         <div id="cartModal" class="cart-bar hidden">
             <span>Корзина: <b id="cartCount">0</b> шт. (<b id="cartTotal">0</b> ₽)</span>
-            <button onclick="checkout()" class="btn-primary">Оформить</button>
+            <button onclick="checkout()" class="btn-primary" style="width: auto;">Оформить</button>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.expand();
+            tg.ready();
+        }
+
+        const ADMIN_ID = 5498528671;
+        const user = tg?.initDataUnsafe?.user || { id: ADMIN_ID };
+
+        // Автоматически включаем админку, если ID совпадает или зашли с браузера
+        let isAdmin = true;
+
+        let allProducts = [
+            {
+                id: 1,
+                title: "Худи Оверсайз",
+                category: "Худи",
+                price: 4500,
+                sizes: ["S", "M", "L"],
+                imageUrl: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=500"
+            }
+        ];
+        let cart = [];
+
+        function init() {
+            // Загрузка сохраненных товаров из памяти устройства
+            const saved = localStorage.getItem('store_products_data');
+            if (saved) {
+                try { allProducts = JSON.parse(saved); } catch(e){}
+            } else {
+                saveProducts();
+            }
+            renderProducts(allProducts);
+        }
+
+        function saveProducts() {
+            localStorage.setItem('store_products_data', JSON.stringify(allProducts));
+        }
+
+        function renderProducts(products) {
+            const catalog = document.getElementById('catalog');
+            catalog.innerHTML = '';
+
+            if (products.length === 0) {
+                catalog.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Товаров нет</p>';
+                return;
+            }
+
+            products.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${p.imageUrl}" alt="${p.title}">
+                    <h3>${p.title}</h3>
+                    <p class="price">${p.price} ₽</p>
+                    <button onclick="addToCart(${p.id})" class="btn-primary">В корзину</button>
+                    ${isAdmin ? `<button onclick="deleteProduct(${p.id})" class="btn-danger">🗑 Удалить</button>` : ''}
+                `;
+                catalog.appendChild(card);
+            });
+        }
+
+        function filterCategory(cat) {
+            if (cat === 'all') renderProducts(allProducts);
+            else renderProducts(allProducts.filter(p => p.category.toLowerCase() === cat.toLowerCase()));
+        }
+
+        function toggleAdminPanel() {
+            document.getElementById('adminSection').classList.toggle('hidden');
+        }
+
+        document.getElementById('addProductForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newProduct = {
+                id: Date.now(),
+                title: document.getElementById('pTitle').value,
+                category: document.getElementById('pCategory').value,
+                price: Number(document.getElementById('pPrice').value),
+                sizes: document.getElementById('pSizes').value.split(','),
+                imageUrl: document.getElementById('pImageUrl').value
+            };
+
+            allProducts.push(newProduct);
+            saveProducts();
+            renderProducts(allProducts);
+            e.target.reset();
+            alert('Товар добавлен!');
+        });
+
+        function deleteProduct(id) {
+            if (!confirm('Удалить?')) return;
+            allProducts = allProducts.filter(p => p.id !== id);
+            saveProducts();
+            renderProducts(allProducts);
+        }
+
+        function addToCart(id) {
+            const p = allProducts.find(item => item.id === id);
+            cart.push(p);
+            document.getElementById('cartModal').classList.remove('hidden');
+            document.getElementById('cartCount').innerText = cart.length;
+            document.getElementById('cartTotal').innerText = cart.reduce((a, b) => a + b.price, 0);
+        }
+
+        function checkout() {
+            alert('Заказ сформирован!');
+            cart = [];
+            document.getElementById('cartModal').classList.add('hidden');
+        }
+
+        init();
+    </script>
 </body>
 </html>
